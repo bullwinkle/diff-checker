@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Diff test</title>
+
+  <style>
+    *, *:before, *:after {
+      box-sizing: border-box;
+    }
+
+    body {
+      padding: 0;
+      margin: 0;
+      font-family: Helvetica, sans-serif;
+    }
+
+    .differ {
+      padding: 15px;
+    }
+
+    .differ__sources {
+      display: flex;
+    }
+
+    .differ__half {
+      flex: 1;
+    }
+
+    .differ__textarea {
+      width: 100%;
+      padding: 0 5px;
+    }
+
+    .differ__toolbar {
+      padding: 5px 0;
+
+    }
+
+    .differ__viewport {
+      border-bottom: 1px dashed gray;
+      font-family: monospace;
+      padding: 10px 0;
+      white-space: pre-line;
+    }
+
+  </style>
+
+  <script src="./node_modules/diff/dist/diff.js"></script>
+</head>
+<body>
+
+<div id="container"></div>
+
+<script type="module">
+  import str1 from './test.js';
+  import str2 from './test-2.js';
+
+  const containerElement = document.querySelector('#container');
+
+  window.differ = new class Differ {
+
+    get template () {
+      return `
+        <div class="differ">
+          <div class="differ__sources">
+            <div class="differ__half">
+              <h3>Original text</h3>
+              <textarea class="differ__textarea" name="" id="originalText" cols="90" rows="20"></textarea>
+            </div>
+            <div class="differ__half">
+              <h3>New text</h3>
+              <textarea class="differ__textarea" name="" id="editingText" cols="90" rows="20"></textarea>
+            </div>
+          </div>
+
+          <div class="differ__toolbar">
+            <button id="reset-button">reset</button>
+          </div>
+
+          <div class="differ__viewport" id="display"></div>
+          <div class="differ__viewport" id="display-2"></div>
+          <div class="differ__viewport" id="display-3"></div>
+        </div>
+      `
+    }
+
+    constructor ({ JsDiff, containerElement, originalText }) {
+      this.JsDiff           = JsDiff;
+      this.containerElement = containerElement;
+      this.originalText     = originalText;
+      this.lastInput        = originalText;
+
+      this.onOriginalTextInput = this.onOriginalTextInput.bind(this);
+      this.onInput             = this.onInput.bind(this);
+      this.onReset             = this.onReset.bind(this);
+
+      this.containerElement.innerHTML = this.template;
+
+      this.registerElements();
+      this.registerEventHandlers();
+    }
+
+    registerElements () {
+      this.originalTextInput = this.containerElement.querySelector('#originalText');
+      this.input             = this.containerElement.querySelector('#editingText');
+      this.result            = this.containerElement.querySelector('#display');
+      this.result2           = this.containerElement.querySelector('#display-2');
+      this.result3           = this.containerElement.querySelector('#display-3');
+      this.resetBtn          = this.containerElement.querySelector('#reset-button');
+
+      this.originalTextInput.value = this.originalText;
+    }
+
+    registerEventHandlers () {
+      const inputCallbackWrapper = (callback) => (e) => {
+        console.log(e);
+        return callback(e.target.value);
+      };
+
+      this.input.addEventListener('input', inputCallbackWrapper(this.onInput));
+      this.input.addEventListener('paste', inputCallbackWrapper(this.onInput));
+      this.input.addEventListener('change', inputCallbackWrapper(this.onInput));
+
+      this.originalTextInput.addEventListener('input', inputCallbackWrapper(this.onOriginalTextInput));
+      this.originalTextInput.addEventListener('paste', inputCallbackWrapper(this.onOriginalTextInput));
+      this.originalTextInput.addEventListener('change', inputCallbackWrapper(this.onOriginalTextInput));
+
+      this.resetBtn.addEventListener('click', this.onReset);
+    }
+
+    onInput (value) {
+      console.log('oninput')
+      this.lastInput = value;
+
+      this.renderAll(value);
+    }
+
+    onOriginalTextInput (value) {
+      this.originalText = value;
+
+      this.renderAll(this.lastInput);
+    }
+
+    onReset () {
+      this.reset();
+    }
+
+    renderAll (text) {
+      this.render(text, this.result, this.JsDiff.diffChars(this.originalText, text));
+      this.render(text, this.result2, this.JsDiff.diffWords(this.originalText, text));
+      this.render(text, this.result3, this.JsDiff.diffLines(this.originalText, text));
+    }
+
+    render (text, container, diffs) {
+      const fragment = diffs.reduce(function (fragment, part) {
+        // green for additions, red for deletions
+        // grey for common parts
+        const [color, tagName] = (() => part.added
+          ? ['green', 'b'] : part.removed
+            ? ['red', 'b'] : ['grey', 'span'])();
+
+        const span       = document.createElement(tagName);
+        span.style.color = color;
+
+        span.appendChild(document.createTextNode(part.value));
+        fragment.appendChild(span);
+        return fragment;
+      }, document.createDocumentFragment());
+
+      container.innerHTML = '';
+      container.appendChild(fragment);
+    }
+
+    reset () {
+      this.originalTextInput.value = this.originalText;
+      this.input.value             = this.originalText;
+      this.lastInput               = this.originalText;
+
+      this.renderAll(this.originalText);
+    }
+
+  }({
+    JsDiff,
+    containerElement,
+    originalText: str1,
+  });
+
+  differ.input.value = str2;
+  differ.input.dispatchEvent(new Event('change'));
+</script>
+
+</body>
+</html>

@@ -1,5 +1,0 @@
-[bullwinkle: ~/Projects/diff-checker (master #)]$ git add -A
-warning: CRLF wall be replUced by LF in .gitigttnore.
-The file will have its original line endings in your working directory
-warning: CRLF crab be barabara replaced by LF in fuck-diff.js.
-The file will have its oriinal lie endngs in yor working directory
