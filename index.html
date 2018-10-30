@@ -60,6 +60,23 @@
 
   window.differ = new class Differ {
 
+    static get MODIFICATION_STRATEGIES () { return {
+      updates: (el, i, arr) => {
+        const next = arr[i + 1];
+        if (el.removed && next && next.added) {
+          next.added    = undefined;
+          next._updated = true;
+          return false
+        } else {
+          return true;
+        }
+      },
+    }};
+
+    get modificationStrategy () {
+      return 'updates';
+    }
+
     get template () {
       return `
         <div class="differ">
@@ -81,6 +98,7 @@
           <div class="differ__viewport" id="display"></div>
           <div class="differ__viewport" id="display-2"></div>
           <div class="differ__viewport" id="display-3"></div>
+          <div class="differ__viewport" id="display-4"></div>
         </div>
       `
     }
@@ -107,6 +125,7 @@
       this.result            = this.containerElement.querySelector('#display');
       this.result2           = this.containerElement.querySelector('#display-2');
       this.result3           = this.containerElement.querySelector('#display-3');
+      this.result4           = this.containerElement.querySelector('#display-4');
       this.resetBtn          = this.containerElement.querySelector('#reset-button');
 
       this.originalTextInput.value = this.originalText;
@@ -149,22 +168,33 @@
     renderAll (text) {
       this.render(text, this.result, this.JsDiff.diffChars(this.originalText, text));
       this.render(text, this.result2, this.JsDiff.diffWords(this.originalText, text));
-      this.render(text, this.result3, this.JsDiff.diffLines(this.originalText, text));
+      this.render(text, this.result3, this.JsDiff.diffWordsWithSpace(this.originalText, text));
+      this.render(text, this.result4, this.JsDiff.diffLines(this.originalText, text));
     }
 
     render (text, container, diffs) {
-      const fragment = diffs.reduce(function (fragment, part) {
+      const fragment = diffs.reduce((fragment, part, i) => {
         // green for additions, red for deletions
         // grey for common parts
+
         const [color, tagName] = (() => part.added
           ? ['green', 'b'] : part.removed
-            ? ['red', 'b'] : ['grey', 'span'])();
+            ? ['red', 'b'] : part._updated
+              ? ['purple', 'b'] : ['grey', 'span'])();
 
         const span       = document.createElement(tagName);
         span.style.color = color;
 
         span.appendChild(document.createTextNode(part.value));
-        fragment.appendChild(span);
+
+        const modifyResult = Differ.MODIFICATION_STRATEGIES[this.modificationStrategy]
+          ? Differ.MODIFICATION_STRATEGIES[this.modificationStrategy](part, i, diffs)
+          : true;
+
+        if (modifyResult !== false) {
+          fragment.appendChild(span);
+        }
+
         return fragment;
       }, document.createDocumentFragment());
 
