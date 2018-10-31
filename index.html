@@ -62,18 +62,18 @@
 
     /* Variants of modification part of text on diffs rendering. Variants like: showUpdates, hideRemoves ...
        @params el, i, arr
-       @returns Element | undefined : return element if it have to be rendered, otherwise undefined/false/0/''
+       @returns Part | undefined : return part if it have to be rendered, otherwise undefined/false/0/''
     */
     static get MODIFICATION_STRATEGIES () { return {
       
-      showUpdates: (el, i, arr) => {
+      showUpdates: (part, i, arr) => {
         const next = arr[i + 1];
-        if (el.removed && next && next.added) {
+        if (part.removed && next && next.added) {
           next.added    = undefined;
           next._updated = true;
           return false
         } else {
-          return el;
+          return part;
         }
       },
 
@@ -180,22 +180,22 @@
 
     render (text, container, diffs) {
       const fragment = diffs.reduce((fragment, part, i) => {
-
-        const [color, tagName] = (() => part.added
-          ? ['green', 'b'] : part.removed
-            ? ['red', 'b'] : part._updated
-              ? ['purple', 'b'] : ['grey', 'span'])();
-        
-        const span = document.createElement(tagName);
-
-        span.style.color = color;
-        span.appendChild(document.createTextNode(part.value));
         
         const modifyMethod = Differ.MODIFICATION_STRATEGIES[this.modificationStrategy];
         const modifyResult = modifyMethod ? modifyMethod(part, i, diffs) : true;
 
         if (modifyResult) {
-          fragment.appendChild(span);
+          const [color, tagName] = (() => part.added
+            ? ['green', 'b'] : part.removed
+              ? ['red', 'b'] : part._updated
+                ? ['purple', 'b'] : ['grey', 'span'])();
+
+          const element = document.createElement(tagName);
+
+          element.style.color = color;
+          element.appendChild(document.createTextNode(part.value));
+
+          fragment.appendChild(element);
         }
 
         return fragment;
