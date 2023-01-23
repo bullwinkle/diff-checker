@@ -13,6 +13,6 @@
   "dependencies": {
     "colors": "^1.3.2",
     "diff": "^3.5.0",
-    "diffchecker": "^0.1.4"
+    "diffchecker": "^0.2.8"
   }
 }
